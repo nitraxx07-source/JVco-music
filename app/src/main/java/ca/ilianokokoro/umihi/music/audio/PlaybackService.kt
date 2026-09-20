@@ -104,6 +104,7 @@ class PlaybackService : MediaLibraryService() {
             .setHandleAudioBecomingNoisy(true)
             .setDeviceVolumeControlEnabled(true)
             .setMediaSourceFactory(DefaultMediaSourceFactory(resolvingFactory))
+            .setSkipSilenceEnabled(true)
             .build()
 
         player.preloadConfiguration =
