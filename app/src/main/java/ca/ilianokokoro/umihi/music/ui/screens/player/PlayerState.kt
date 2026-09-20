@@ -1,6 +1,7 @@
 package ca.ilianokokoro.umihi.music.ui.screens.player
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
 import ca.ilianokokoro.umihi.music.models.Song
 
 @Immutable
@@ -20,6 +21,8 @@ data class PlayerState(
     val isLiking: Boolean = false,
     val showVolumeDialog: Boolean = false,
     val appVolume: Int = 100,
+    val dynamicBackgroundColor: Color = Color(0xFF1B1C24),
+    val dynamicBackgroundSource: String = "",
 )
 
 @Immutable

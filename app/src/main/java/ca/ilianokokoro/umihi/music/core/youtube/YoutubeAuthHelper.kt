@@ -21,6 +21,7 @@ object YoutubeAuthHelper {
         settings: UmihiSettings?,
         client: JsonObject? = null,
         visitorData: String? = null,
+        searchParams: String? = null,
     ): JsonObject {
         val clientToUse = client ?: Constants.YoutubeApi.Client.WEB_REMIX
 
@@ -47,8 +48,8 @@ object YoutubeAuthHelper {
             if (idName != null) {
                 put(idName, JsonPrimitive(id))
 
-                if (idName == "query") {
-                    put("params", JsonPrimitive(Constants.YoutubeApi.Search.FILTER))
+                if (idName == "query" && searchParams != null) {
+                    put("params", JsonPrimitive(searchParams))
                 }
             }
         }
@@ -117,10 +118,17 @@ object YoutubeAuthHelper {
         }
 
 
-        settings?.cookies?.let {
-            headers["Cookie"] = it.toRawCookie()
+        settings?.cookies?.takeIf { it.isNotBlank() }?.let { rawCookie ->
+            headers["Cookie"] = rawCookie
 
-            val cookieMap = it.data
+            val cookieMap = rawCookie
+                .split(";")
+                .mapNotNull { entry ->
+                    val parts = entry.trim().split("=", limit = 2)
+                    if (parts.size == 2) parts[0] to parts[1] else null
+                }
+                .toMap()
+
             val sapisidCookie = cookieMap["SAPISID"] ?: cookieMap["__Secure-3PAPISID"]
 
             if (sapisidCookie != null) {

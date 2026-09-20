@@ -34,6 +34,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
@@ -45,6 +46,7 @@ import androidx.navigation3.ui.NavDisplay
 import ca.ilianokokoro.umihi.music.R
 import ca.ilianokokoro.umihi.music.core.Constants
 import ca.ilianokokoro.umihi.music.core.helpers.LogHelper.printe
+import ca.ilianokokoro.umihi.music.core.managers.PlayerManager
 import ca.ilianokokoro.umihi.music.ui.components.miniplayer.MiniPlayerWrapper
 import ca.ilianokokoro.umihi.music.ui.navigation.viewmodels.SharedViewModel
 import ca.ilianokokoro.umihi.music.ui.screens.auth.AuthScreen
@@ -63,6 +65,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
     val app = LocalContext.current.applicationContext as Application
     val currentScreen = backStack.last()
     val screenConfig = rememberScreenUiConfig(currentScreen)
+    val dynamicPlayerColor by PlayerManager.dynamicBackgroundColor.collectAsStateWithLifecycle()
 
     var showFullPlayer by remember { mutableStateOf(false) }
     var bottomBarHeightPixels by remember { mutableIntStateOf(0) }
@@ -182,6 +185,9 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                         is SearchScreenKey -> NavEntry(key) {
                             SearchScreen(
                                 application = app,
+                                onPlaylistPressed = { playlist ->
+                                    backStack.add(PlaylistScreenKey(playlistInfo = playlist))
+                                }
                             )
                         }
 
@@ -235,6 +241,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
     if (showFullPlayer) {
         ModalBottomSheet(
             sheetMaxWidth = Dp.Unspecified,
+            containerColor = dynamicPlayerColor,
             onDismissRequest = {
                 showFullPlayer = false
             },

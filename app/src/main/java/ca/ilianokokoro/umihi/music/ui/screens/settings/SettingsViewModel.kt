@@ -23,7 +23,9 @@ import ca.ilianokokoro.umihi.music.core.managers.VersionManager
 import ca.ilianokokoro.umihi.music.data.database.AppDatabase
 import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository
 import ca.ilianokokoro.umihi.music.data.repositories.DownloadRepository
+import ca.ilianokokoro.umihi.music.data.repositories.PreferenceKeys
 import ca.ilianokokoro.umihi.music.models.Playlist
+import ca.ilianokokoro.umihi.music.models.DownloadQuality
 import ca.ilianokokoro.umihi.music.ui.navigation.viewmodels.SharedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -163,7 +165,7 @@ class SettingsViewModel(
     fun updateAudioOffloadSetting(value: Boolean) {
         PlayerManager.setAudioOffloadEnabled(value)
         updateSetting(
-            DatastoreRepository.PreferenceKeys.USE_AUDIO_OFFLOAD,
+            PreferenceKeys.USE_AUDIO_OFFLOAD,
             value
         )
     }
@@ -171,7 +173,7 @@ class SettingsViewModel(
     fun updateKeepScreenOnSetting(value: Boolean) {
         ScreenAwakeManager.setKeepScreenOn(value)
         updateSetting(
-            DatastoreRepository.PreferenceKeys.KEEP_SCREEN_ON,
+            PreferenceKeys.KEEP_SCREEN_ON,
             value
         )
     }
@@ -208,17 +210,21 @@ class SettingsViewModel(
         _uiState.update { it.copy(showThemeSelectorSheet = show) }
     }
 
+    fun updateShowDownloadQualitySheet(show: Boolean) {
+        _uiState.update { it.copy(showDownloadQualitySheet = show) }
+    }
+
     fun saveCacheSize(sizeMB: Int, cacheType: CacheType) {
         viewModelScope.launch {
             when (cacheType) {
                 CacheType.AUDIO -> updateSetting(
-                    DatastoreRepository.PreferenceKeys.EXOPLAYER_CACHE_SIZE,
+                    PreferenceKeys.EXOPLAYER_CACHE_SIZE,
                     sizeMB
                 )
 
                 CacheType.THUMBNAIL -> {
                     updateSetting(
-                        DatastoreRepository.PreferenceKeys.THUMBNAIL_CACHE_SIZE,
+                        PreferenceKeys.THUMBNAIL_CACHE_SIZE,
                         sizeMB
                     )
                     CoilImageLoader.reset(_application)
@@ -293,6 +299,43 @@ class SettingsViewModel(
             initializer {
                 SettingsViewModel(sharedViewModel, application)
             }
+        }
+    }
+
+    fun toggleSkipSilence(enabled: Boolean) {
+        viewModelScope.launch {
+            datastoreRepository.updateSkipSilence(enabled)
+            PlayerManager.setSkipSilenceEnabled(enabled)
+            _uiState.update { state ->
+                val success = state.screenState as? ScreenState.Success ?: return@update state
+                state.copy(screenState = ScreenState.Success(success.settings.copy(skipSilence = enabled)))
+            }
+        }
+    }
+
+    fun updateDownloadQuality(quality: DownloadQuality) {
+        viewModelScope.launch {
+            datastoreRepository.updateDownloadQuality(quality)
+            _uiState.update { state ->
+                val success = state.screenState as? ScreenState.Success ?: return@update state
+                state.copy(screenState = ScreenState.Success(success.settings.copy(downloadQuality = quality)))
+            }
+        }
+    }
+
+    fun openSystemEqualizer() {
+        if (!PlayerManager.openSystemEqualizer()) {
+            Toast.makeText(
+                _application,
+                "No hay un ecualizador del sistema instalado",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    fun updateThemeMode(themeMode: ca.ilianokokoro.umihi.music.models.ThemeMode) {
+        viewModelScope.launch {
+            datastoreRepository.updateThemeMode(themeMode)
         }
     }
 }

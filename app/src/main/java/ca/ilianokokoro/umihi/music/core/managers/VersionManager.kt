@@ -19,9 +19,9 @@ import ca.ilianokokoro.umihi.music.core.helpers.LogHelper.printe
 import ca.ilianokokoro.umihi.music.data.database.AppDatabase
 import ca.ilianokokoro.umihi.music.data.datasources.local.VersionDataSource
 import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.UpdateChannel
 import ca.ilianokokoro.umihi.music.data.repositories.GithubRepository
 import ca.ilianokokoro.umihi.music.models.UmihiSettings
+import ca.ilianokokoro.umihi.music.models.UpdateChannel
 import ca.ilianokokoro.umihi.music.models.Version
 import ca.ilianokokoro.umihi.music.models.dto.GithubReleaseResponse
 import kotlinx.coroutines.Dispatchers
@@ -82,8 +82,8 @@ object VersionManager {
 
         try {
             val url = when (settings.updateChannel) {
-                UpdateChannel.Stable -> Constants.Url.Github.Release.API
-                UpdateChannel.Beta -> Constants.Url.Github.Beta.API
+                UpdateChannel.STABLE -> Constants.Url.Github.Release.API
+                UpdateChannel.BETA -> Constants.Url.Github.Beta.API
             }
 
             githubRepository.getReleaseInfoByUrl(url).collect { result ->
@@ -91,11 +91,11 @@ object VersionManager {
                     is ApiResult.Success -> {
                         val release = result.data
                         val outdated = when (settings.updateChannel) {
-                            UpdateChannel.Stable -> release.versionName.isNewUpdate(
+                            UpdateChannel.STABLE -> release.versionName.isNewUpdate(
                                 manualCheck
                             )
 
-                            UpdateChannel.Beta -> BuildConfig.COMMIT_HASH.isNewUpdate(
+                            UpdateChannel.BETA -> BuildConfig.COMMIT_HASH.isNewUpdate(
                                 manualCheck,
                                 release.commit
                             )

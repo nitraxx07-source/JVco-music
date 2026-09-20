@@ -7,6 +7,7 @@ import ca.ilianokokoro.umihi.music.core.helpers.LogHelper.printd
 import ca.ilianokokoro.umihi.music.core.helpers.LogHelper.printe
 import ca.ilianokokoro.umihi.music.core.youtube.YoutubeDataExtractor
 import ca.ilianokokoro.umihi.music.models.Song
+import ca.ilianokokoro.umihi.music.models.DownloadQuality
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -81,6 +82,8 @@ object DownloadHelper {
     suspend fun downloadAudio(
         context: Context,
         song: Song,
+        quality: DownloadQuality = DownloadQuality.HIGH,
+        onProgress: (Int) -> Unit = {},
         retries: Int = Constants.YoutubeApi.RETRY_COUNT
     ): String? = withContext(Dispatchers.IO) {
         val audioDir = UmihiHelper.getDownloadDirectory(
@@ -96,7 +99,7 @@ object DownloadHelper {
             return@withContext outputFile.absolutePath
         }
 
-        val url = YoutubeDataExtractor.getSongPlayerUrl(context, song)
+        val url = YoutubeDataExtractor.getSongPlayerUrl(context, song, quality = quality)
 
         var lastException: Exception? = null
 
@@ -121,10 +124,21 @@ object DownloadHelper {
 
                         val body = response.body
                             ?: throw IOException("Empty audio response body")
+                        val totalBytes = body.contentLength()
+                        var downloadedBytes = 0L
 
                         body.byteStream().use { input ->
                             FileOutputStream(tempFile).use { output ->
-                                input.copyTo(output)
+                                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                                while (true) {
+                                    val read = input.read(buffer)
+                                    if (read == -1) break
+                                    output.write(buffer, 0, read)
+                                    downloadedBytes += read
+                                    if (totalBytes > 0) {
+                                        onProgress(((downloadedBytes * 90L) / totalBytes).toInt().coerceIn(0, 90))
+                                    }
+                                }
                             }
                         }
                     }

@@ -9,11 +9,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,11 +43,13 @@ import ca.ilianokokoro.umihi.music.ui.components.LoadingAnimation
 import ca.ilianokokoro.umihi.music.ui.components.SearchBar
 import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.addtoplaylist.AddToPlaylistBottomSheet
 import ca.ilianokokoro.umihi.music.ui.components.song.SongListItem
+import ca.ilianokokoro.umihi.music.ui.components.SquareImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     application: Application,
+    onPlaylistPressed: (ca.ilianokokoro.umihi.music.models.PlaylistInfo) -> Unit,
     searchViewModel: SearchViewModel = viewModel(
         factory =
             SearchViewModel.Factory(application = application)
@@ -90,6 +96,7 @@ fun SearchScreen(
             searchViewModel,
             uiState,
             isLoggedIn,
+            onPlaylistPressed = onPlaylistPressed,
             onAddToPlaylist = { addToPlaylistSong = it },
             modifier = Modifier.padding(top = paddingValues.calculateTopPadding())
         )
@@ -110,6 +117,7 @@ fun SearchScreenContent(
     searchViewModel: SearchViewModel,
     uiState: SearchState,
     isLoggedIn: Boolean,
+    onPlaylistPressed: (ca.ilianokokoro.umihi.music.models.PlaylistInfo) -> Unit,
     modifier: Modifier = Modifier,
     onAddToPlaylist: (Song) -> Unit = {},
 ) {
@@ -135,7 +143,7 @@ fun SearchScreenContent(
 
             is ScreenState.Success -> {
                 val songs = screenState.results
-                if (songs.isNotEmpty()) {
+                if (songs.isNotEmpty() || screenState.playlists.isNotEmpty()) {
                     LazyColumn(
                         verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -143,6 +151,25 @@ fun SearchScreenContent(
                         modifier = Modifier
                             .fillMaxSize()
                     ) {
+                        items(
+                            items = screenState.playlists,
+                            key = { playlist -> "playlist_${playlist.id}" }
+                        ) { playlist ->
+                            ListItem(
+                                modifier = Modifier.clickable { onPlaylistPressed(playlist) },
+                                leadingContent = {
+                                    SquareImage(
+                                        uri = playlist.coverHref,
+                                        modifier = Modifier.size(60.dp)
+                                    )
+                                },
+                                headlineContent = { Text(playlist.title) },
+                                supportingContent = {
+                                    Text(stringResource(R.string.playlist_result))
+                                },
+                                colors = ListItemDefaults.colors()
+                            )
+                        }
                         items(
                             items = songs,
                             key = { song ->
@@ -163,7 +190,9 @@ fun SearchScreenContent(
                                     { onAddToPlaylist(it) }
                                 } else {
                                     null
-                                }
+                                },
+                                download = { searchViewModel.downloadSong(it) },
+                                downloadProgress = uiState.downloadProgress[it.youtubeId]
                             )
                         }
                     }

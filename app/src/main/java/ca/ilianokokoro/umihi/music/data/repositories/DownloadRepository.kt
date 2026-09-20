@@ -133,7 +133,10 @@ class DownloadRepository(appContext: Context) {
 
     fun getExistingJobFlow(playlist: Playlist): Flow<List<WorkInfo>> {
         return workManager.getWorkInfosForUniqueWorkFlow(playlist.info.id)
+    }
 
+    fun getSongJobFlow(songWorkId: String): Flow<List<WorkInfo>> {
+        return workManager.getWorkInfosForUniqueWorkFlow(songWorkId)
     }
 
     private fun getExistingJobs(id: String): List<WorkInfo> {

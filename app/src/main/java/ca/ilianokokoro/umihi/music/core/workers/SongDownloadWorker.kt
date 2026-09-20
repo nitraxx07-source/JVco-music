@@ -38,6 +38,7 @@ class SongDownloadWorker(
 
         val song = localSongRepository.getSong(songId)
             ?: return Result.failure()
+        val settings = ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository(appContext).getSettings()
 
         return try {
             val playlistImage = DownloadHelper.downloadImage(
@@ -58,7 +59,14 @@ class SongDownloadWorker(
 
             val fullSong = (fullSongData as ApiResult.Success).data
 
-            val audioPath = DownloadHelper.downloadAudio(appContext, song)
+            val audioPath = DownloadHelper.downloadAudio(
+                context = appContext,
+                song = song,
+                quality = settings.downloadQuality,
+                onProgress = { progress ->
+                    setProgressAsync(androidx.work.workDataOf(PROGRESS_KEY to progress))
+                }
+            )
 
             val thumbnailPath = DownloadHelper.downloadImage(
                 appContext,
@@ -72,6 +80,7 @@ class SongDownloadWorker(
             )
 
             localSongRepository.create(updatedSong)
+            setProgress(androidx.work.workDataOf(PROGRESS_KEY to 100))
 
             NotificationManager.showSongDownloadSuccess(appContext, song)
 
@@ -110,5 +119,6 @@ class SongDownloadWorker(
     companion object {
         const val PLAYLIST_KEY = "playlist"
         const val SONG_KEY = "song"
+        const val PROGRESS_KEY = "progress"
     }
 }

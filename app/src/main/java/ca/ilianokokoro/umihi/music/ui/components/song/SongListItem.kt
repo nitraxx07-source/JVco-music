@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.PlayCircleOutline
 import androidx.compose.material.icons.rounded.PlaylistRemove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.Text
@@ -46,6 +47,7 @@ fun SongListItem(
     download: (() -> Unit)? = null,
     addToPlaylist: (() -> Unit)? = null,
     removeFromPlaylist: (() -> Unit)? = null,
+    downloadProgress: Int? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -65,11 +67,19 @@ fun SongListItem(
             }
         },
         trailingContent = {
-            IconButton(onClick = { expanded = true }) {
-                Icon(
-                    Icons.Rounded.MoreVert,
-                    contentDescription = stringResource(R.string.more)
+            if (downloadProgress != null) {
+                CircularProgressIndicator(
+                    progress = { downloadProgress.coerceIn(0, 100) / 100f },
+                    modifier = Modifier.size(28.dp),
+                    trackColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
                 )
+            } else {
+                IconButton(onClick = { expanded = true }) {
+                    Icon(
+                        Icons.Rounded.MoreVert,
+                        contentDescription = stringResource(R.string.more)
+                    )
+                }
             }
             MaterialUDropdown(
                 expanded = expanded,

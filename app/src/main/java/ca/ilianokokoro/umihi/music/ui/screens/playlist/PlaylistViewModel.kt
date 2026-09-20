@@ -25,6 +25,7 @@ import ca.ilianokokoro.umihi.music.ui.navigation.viewmodels.SharedViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.uuid.Uuid
@@ -75,7 +76,7 @@ class PlaylistViewModel(
 
     private fun observeLoginState() {
         viewModelScope.launch {
-            datastoreRepository.cookies.collect { cookies ->
+            datastoreRepository.settings.map { it.cookies }.collect { cookies ->
                 _uiState.update { it.copy(isLoggedIn = cookies.isNotEmpty()) }
             }
         }

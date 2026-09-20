@@ -153,9 +153,9 @@ androidComponents {
             val flavor = variant.flavorName
             output.outputFileName.set(
                 when (flavor) {
-                    "standalone" -> "UmihiMusic.apk"
-                    "store" -> "UmihiMusic-store.apk"
-                    else -> "UmihiMusic-$flavor.apk"
+                    "standalone" -> "JVmusic.apk"
+                    "store" -> "JVmusic-store.apk"
+                    else -> "JVmusic-$flavor.apk"
                 }
             )
         }
@@ -213,6 +213,7 @@ dependencies {
 
     // Icons
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.palette)
 
     // Room
     implementation(libs.androidx.room.runtime)

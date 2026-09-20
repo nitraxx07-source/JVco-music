@@ -9,8 +9,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -85,14 +86,27 @@ fun PlayerScreen(
             start = 8.dp,
             end = 8.dp,
             bottom = 10.dp
-        )
+        ),
+        containerColor = uiState.dynamicBackgroundColor.copy(alpha = 0.82f)
     ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            uiState.dynamicBackgroundColor.copy(alpha = 0.88f),
+                            MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.96f),
+                        )
+                    )
+                )
+                .padding(paddingValues)
+        ) {
         if (orientation == Configuration.ORIENTATION_PORTRAIT) {
             Column(
                 modifier = modifier
-                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(horizontal = 0.dp),
 
                 horizontalAlignment = Alignment.CenterHorizontally
 
@@ -146,9 +160,8 @@ fun PlayerScreen(
         } else if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
             Row(
                 modifier = modifier
-                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(horizontal = 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
@@ -205,6 +218,7 @@ fun PlayerScreen(
                 }
             }
 
+        }
         }
     }
 

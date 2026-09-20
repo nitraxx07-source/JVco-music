@@ -2,7 +2,9 @@ package ca.ilianokokoro.umihi.music.ui.screens.player
 
 
 import android.app.Application
+import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -18,11 +20,15 @@ import ca.ilianokokoro.umihi.music.core.helpers.LogHelper.printe
 import ca.ilianokokoro.umihi.music.core.managers.PlayerManager
 import ca.ilianokokoro.umihi.music.core.youtube.YoutubeApiClient
 import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository
+import androidx.palette.graphics.Palette
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.URL
 import kotlin.time.Duration.Companion.milliseconds
 
 
@@ -218,8 +224,16 @@ class PlayerViewModel(application: Application) :
             state.copy(
                 currentIndex = index,
                 queue = mergedQueue,
-                isLiked = mergedQueue.getOrNull(index)?.isLiked ?: false
+                isLiked = mergedQueue.getOrNull(index)?.isLiked ?: false,
+                dynamicBackgroundSource = mergedQueue.getOrNull(index)?.thumbnailPath
+                    ?: mergedQueue.getOrNull(index)?.thumbnailHref
+                    ?: state.dynamicBackgroundSource
             )
+        }
+
+        val artwork = freshQueue.getOrNull(index)?.thumbnailPath ?: freshQueue.getOrNull(index)?.thumbnailHref
+        if (!artwork.isNullOrBlank()) {
+            updateDynamicBackgroundColor(artwork)
         }
     }
 
@@ -345,6 +359,57 @@ class PlayerViewModel(application: Application) :
             }
 
             state.copy(queue = updatedQueue)
+        }
+        val artworkUrl = _uiState.value.queue.getOrNull(_uiState.value.currentIndex)?.thumbnailPath
+            ?: _uiState.value.queue.getOrNull(_uiState.value.currentIndex)?.thumbnailHref
+        if (!artworkUrl.isNullOrBlank()) {
+            updateDynamicBackgroundColor(artworkUrl)
+        }
+    }
+
+    private fun updateDynamicBackgroundColor(artworkUrl: String) {
+        if (artworkUrl == _uiState.value.dynamicBackgroundSource) return
+
+        viewModelScope.launch {
+            val paletteColor = withContext(Dispatchers.IO) {
+                try {
+                    val bitmap = when {
+                        artworkUrl.startsWith("http://", true) || artworkUrl.startsWith("https://", true) -> {
+                            URL(artworkUrl).openStream().use { BitmapFactory.decodeStream(it) }
+                        }
+
+                        artworkUrl.startsWith("file://", true) -> {
+                            val filePath = Uri.parse(artworkUrl).path ?: return@withContext null
+                            BitmapFactory.decodeFile(filePath)
+                        }
+
+                        artworkUrl.startsWith("/", true) -> {
+                            BitmapFactory.decodeFile(artworkUrl)
+                        }
+
+                        else -> null
+                    } ?: return@withContext null
+
+                    val swatch = Palette.from(bitmap)
+                        .generate()
+                        .vibrantSwatch
+                        ?: Palette.from(bitmap).generate().dominantSwatch
+                        ?: Palette.from(bitmap).generate().mutedSwatch
+                        ?: Palette.from(bitmap).generate().lightVibrantSwatch
+                        ?: Palette.from(bitmap).generate().darkVibrantSwatch
+                    if (swatch == null) null else Color(swatch.rgb)
+                } catch (_: Exception) {
+                    null
+                }
+            } ?: Color(0xFF1B1C24)
+
+            _uiState.update {
+                it.copy(
+                    dynamicBackgroundColor = paletteColor,
+                    dynamicBackgroundSource = artworkUrl
+                )
+            }
+            PlayerManager.updateDynamicBackgroundColor(paletteColor)
         }
     }
 

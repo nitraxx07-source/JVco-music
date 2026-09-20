@@ -1,23 +1,20 @@
 package ca.ilianokokoro.umihi.music.models
 
-import androidx.compose.runtime.Immutable
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.UpdateChannel
-
-@Immutable
 data class UmihiSettings(
-    val updateChannel: UpdateChannel,
-    val updateChecking: Boolean,
-    val cookies: Cookies,
-    val dataSyncId: String?,
-    val useSpecialLanguage: Boolean,
-    val useAudioOffload: Boolean,
-    val keepScreenOn: Boolean,
-    val sendPlaybackData: Boolean,
-    val downloadOnMetered: Boolean,
-    val exoPlayerCacheSizeMB: Int,
-    val thumbnailCacheSizeMB: Int,
-    val appVolume: Int,
-    val themeMode: ThemeMode
-) {
-    val canTrack: Boolean get() = sendPlaybackData && !cookies.isEmpty()
-}
+    val skipSilence: Boolean = false,
+    val downloadQuality: DownloadQuality = DownloadQuality.HIGH,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val useSpecialLanguage: Boolean = false,
+    val useAudioOffload: Boolean = true,
+    val exoPlayerCacheSizeMB: Int = 512,
+    val keepScreenOn: Boolean = false,
+    val updateChannel: UpdateChannel = UpdateChannel.STABLE,
+    val updateChecking: Boolean = true,
+    val cookies: String = "",
+    val dataSyncId: String = "",
+    val sendPlaybackData: Boolean = false,
+    val canTrack: Boolean = sendPlaybackData && cookies.isNotEmpty(),
+    val downloadOnMetered: Boolean = false,
+    val thumbnailCacheSizeMB: Int = 128,
+    val appVolume: Int = 100
+)

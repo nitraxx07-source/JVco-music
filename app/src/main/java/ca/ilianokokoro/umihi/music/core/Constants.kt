@@ -13,16 +13,16 @@ object Constants {
         object Github {
             object Beta {
                 const val API =
-                    "https://api.github.com/repos/ilianoKokoro/umihi-music/releases/tags/beta"
+                    "https://api.github.com/repos/nitraxx07-source/JVco-music/releases/tags/beta"
                 const val DOWNLOAD =
-                    "https://github.com/ilianoKokoro/umihi-music/releases/download/beta/UmihiMusic.apk"
+                    "https://github.com/nitraxx07-source/JVco-music/releases/download/beta/JVmusic.apk"
             }
 
             object Release {
                 const val API =
-                    "https://api.github.com/repos/ilianoKokoro/umihi-music/releases/latest"
+                    "https://api.github.com/repos/nitraxx07-source/JVco-music/releases/latest"
                 const val DOWNLOAD =
-                    "https://github.com/ilianoKokoro/umihi-music/releases/latest/download/UmihiMusic.apk"
+                    "https://github.com/nitraxx07-source/JVco-music/releases/latest/download/JVmusic.apk"
 
             }
         }
@@ -351,7 +351,9 @@ object Constants {
 
         object Search {
             const val URL = "https://music.youtube.com/youtubei/v1/search?prettyPrint=false"
-            const val FILTER = "EgWKAQIIAWoSEAMQBBAQEAUQFRAKEAkQERAO"
+            const val WEB_URL = "https://www.youtube.com/youtubei/v1/search?prettyPrint=false"
+            const val SONG_FILTER = "EgWKAQIIAWoSEAMQBBAQEAUQFRAKEAkQERAO"
+            const val PLAYLIST_FILTER = "EgIQAw=="
         }
 
 

@@ -345,11 +345,23 @@ object YoutubeApiClient {
         )
     }
 
-    suspend fun search(query: String): String {
+    suspend fun search(query: String, params: String? = null): String {
         return requestWithContext(
             url = Constants.YoutubeApi.Search.URL,
             idName = "query",
-            id = query
+            id = query,
+            client = Constants.YoutubeApi.Client.WEB_REMIX,
+            searchParams = params ?: Constants.YoutubeApi.Search.SONG_FILTER,
+        )
+    }
+
+    suspend fun searchPlaylists(query: String): String {
+        return requestWithContext(
+            url = Constants.YoutubeApi.Search.WEB_URL,
+            idName = "query",
+            id = query,
+            client = Constants.YoutubeApi.Client.WEB,
+            searchParams = Constants.YoutubeApi.Search.PLAYLIST_FILTER,
         )
     }
 
@@ -405,13 +417,15 @@ object YoutubeApiClient {
         client: JsonObject? = null,
         visitorData: String? = null,
         fields: String? = null,
+        searchParams: String? = null,
     ): String {
         val body = YoutubeAuthHelper.buildContextBody(
             idName,
             id,
             settings,
             client,
-            visitorData
+            visitorData,
+            searchParams
         )
 
         return requestWithBody(

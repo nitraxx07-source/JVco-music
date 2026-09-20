@@ -26,7 +26,7 @@ import androidx.navigation3.runtime.NavKey
 import ca.ilianokokoro.umihi.music.R
 import ca.ilianokokoro.umihi.music.core.Constants
 import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys
+import ca.ilianokokoro.umihi.music.data.repositories.PreferenceKeys
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 

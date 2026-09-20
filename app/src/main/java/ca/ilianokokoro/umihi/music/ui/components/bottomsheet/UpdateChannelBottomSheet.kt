@@ -28,7 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import ca.ilianokokoro.umihi.music.R
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.UpdateChannel
+import ca.ilianokokoro.umihi.music.models.UpdateChannel
 import ca.ilianokokoro.umihi.music.ui.components.SheetHeader
 
 

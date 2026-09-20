@@ -3,160 +3,102 @@ package ca.ilianokokoro.umihi.music.data.repositories
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
-import ca.ilianokokoro.umihi.music.BuildConfig
-import ca.ilianokokoro.umihi.music.core.Constants
-import ca.ilianokokoro.umihi.music.core.helpers.LogHelper
-import ca.ilianokokoro.umihi.music.core.helpers.UmihiHelper.isNullOrInvalidId
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.APP_VOLUME
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.AUTO_UPDATE
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.COOKIES
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.DATA_SYNC_ID
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.DOWNLOAD_ON_METERED
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.EXOPLAYER_CACHE_SIZE
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.KEEP_SCREEN_ON
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.SEND_PLAYBACK_DATA
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.THEME_MODE
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.THUMBNAIL_CACHE_SIZE
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.UPDATE_CHANNEL
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.USE_AUDIO_OFFLOAD
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys.USE_SPECIAL_LANGUAGE
 import ca.ilianokokoro.umihi.music.models.Cookies
+import ca.ilianokokoro.umihi.music.models.DownloadQuality
 import ca.ilianokokoro.umihi.music.models.ThemeMode
 import ca.ilianokokoro.umihi.music.models.UmihiSettings
+import ca.ilianokokoro.umihi.music.models.UpdateChannel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 
-
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = Constants.Datastore.NAME)
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 class DatastoreRepository(private val context: Context) {
-    object PreferenceKeys {
-        val COOKIES = stringPreferencesKey(Constants.Datastore.COOKIES_KEY)
-        val DATA_SYNC_ID = stringPreferencesKey(Constants.Datastore.DATA_SYNC_ID)
-        val UPDATE_CHANNEL = stringPreferencesKey(Constants.Datastore.UPDATE_CHANNEL_KEY)
-        val USE_SPECIAL_LANGUAGE = booleanPreferencesKey(Constants.Datastore.USE_SPECIAL_LANGUAGE)
-        val USE_AUDIO_OFFLOAD = booleanPreferencesKey(Constants.Datastore.USE_AUDIO_OFFLOAD)
-        val KEEP_SCREEN_ON = booleanPreferencesKey(Constants.Datastore.KEEP_SCREEN_ON)
-        val AUTO_UPDATE = booleanPreferencesKey(Constants.Datastore.AUTO_UPDATE)
-        val SEND_PLAYBACK_DATA = booleanPreferencesKey(Constants.Datastore.SEND_PLAYBACK_DATA)
-        val DOWNLOAD_ON_METERED = booleanPreferencesKey(Constants.Datastore.DOWNLOAD_ON_METERED)
-        val EXOPLAYER_CACHE_SIZE = intPreferencesKey(Constants.Datastore.EXOPLAYER_CACHE_SIZE_KEY)
-        val THUMBNAIL_CACHE_SIZE = intPreferencesKey(Constants.Datastore.THUMBNAIL_CACHE_SIZE_KEY)
-        val APP_VOLUME = intPreferencesKey(Constants.Datastore.APP_VOLUME_KEY)
-        val THEME_MODE = stringPreferencesKey(Constants.Datastore.THEME_MODE_KEY)
+    companion object {
+        typealias UpdateChannel = ca.ilianokokoro.umihi.music.models.UpdateChannel
+        val PreferenceKeys = ca.ilianokokoro.umihi.music.data.repositories.PreferenceKeys
     }
 
-    suspend fun <T> save(key: Preferences.Key<T>, value: T) {
-        context.dataStore.edit {
-            it[key] = value
+    val settings: Flow<UmihiSettings> = context.dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { prefs ->
+            val themeStr = prefs[PreferenceKeys.THEME_MODE] ?: "SYSTEM"
+            val parsedTheme = try { ThemeMode.valueOf(themeStr.uppercase()) } catch (e: Exception) { ThemeMode.SYSTEM }
+
+            val channelStr = prefs[PreferenceKeys.UPDATE_CHANNEL] ?: "STABLE"
+            val parsedChannel = try { UpdateChannel.valueOf(channelStr.uppercase()) } catch (e: Exception) { UpdateChannel.STABLE }
+
+            val cookies = prefs[PreferenceKeys.COOKIES] ?: ""
+
+            UmihiSettings(
+                skipSilence = prefs[PreferenceKeys.SKIP_SILENCE] ?: false,
+                downloadQuality = try {
+                    DownloadQuality.valueOf(
+                        (prefs[PreferenceKeys.DOWNLOAD_QUALITY] ?: DownloadQuality.HIGH.name)
+                            .uppercase()
+                    )
+                } catch (_: IllegalArgumentException) {
+                    DownloadQuality.HIGH
+                },
+                themeMode = parsedTheme,
+                useSpecialLanguage = prefs[PreferenceKeys.USE_SPECIAL_LANGUAGE] ?: false,
+                useAudioOffload = prefs[PreferenceKeys.USE_AUDIO_OFFLOAD] ?: true,
+                exoPlayerCacheSizeMB = prefs[PreferenceKeys.EXO_PLAYER_CACHE_SIZE_MB] ?: 512,
+                keepScreenOn = prefs[PreferenceKeys.KEEP_SCREEN_ON] ?: false,
+                updateChannel = parsedChannel,
+                updateChecking = prefs[PreferenceKeys.UPDATE_CHECKING] ?: true,
+                cookies = cookies,
+                dataSyncId = prefs[PreferenceKeys.DATA_SYNC_ID] ?: "",
+                sendPlaybackData = prefs[PreferenceKeys.SEND_PLAYBACK_DATA] ?: false,
+                downloadOnMetered = prefs[PreferenceKeys.DOWNLOAD_ON_METERED] ?: false,
+                thumbnailCacheSizeMB = prefs[PreferenceKeys.THUMBNAIL_CACHE_SIZE_MB] ?: 128,
+                appVolume = prefs[PreferenceKeys.APP_VOLUME] ?: 100,
+                canTrack = (prefs[PreferenceKeys.SEND_PLAYBACK_DATA] ?: false) && !cookies.isNullOrBlank()
+            )
         }
+
+    fun getSettings(): UmihiSettings = runBlocking {
+        settings.first()
     }
 
-    val settings = context.dataStore.data.map {
-        // App defaults
-        val updateChannel = it[UPDATE_CHANNEL]?.let { value -> UpdateChannel.valueOf(value) }
-            ?: if (BuildConfig.IS_BETA) {
-                UpdateChannel.Beta
-            } else {
-                UpdateChannel.Stable
-            }
-        val useSpecialLanguage = it[USE_SPECIAL_LANGUAGE] ?: false
-        val useAudioOffload = it[USE_AUDIO_OFFLOAD] ?: false
-        val keepScreenOn = it[KEEP_SCREEN_ON] ?: false
-        val updateChecking = it[AUTO_UPDATE] ?: true
-        val sendPlaybackData = it[SEND_PLAYBACK_DATA] ?: false
-        val downloadOnMetered = it[DOWNLOAD_ON_METERED] ?: false
-        val exoPlayerCacheSize =
-            it[EXOPLAYER_CACHE_SIZE] ?: Constants.Cache.Audio.DEFAULT_SIZE_MB
-        val thumbnailCacheSize =
-            it[THUMBNAIL_CACHE_SIZE] ?: Constants.Cache.Thumbnail.DEFAULT_SIZE_MB
-        val appVolume = it[APP_VOLUME] ?: Constants.Player.Volume.DEFAULT_PERCENT
-        val themeMode =
-            it[THEME_MODE]?.let { modeStr -> ThemeMode.fromString(modeStr) } ?: ThemeMode.SYSTEM
-        val cookies = cookies.first()
-        val dataSyncId = dataSyncId.first()
-
-
-        UmihiSettings(
-            updateChannel = updateChannel,
-            cookies = cookies,
-            dataSyncId = dataSyncId,
-            useSpecialLanguage = useSpecialLanguage,
-            useAudioOffload = useAudioOffload,
-            keepScreenOn = keepScreenOn,
-            sendPlaybackData = sendPlaybackData,
-            updateChecking = updateChecking,
-            downloadOnMetered = downloadOnMetered,
-            exoPlayerCacheSizeMB = exoPlayerCacheSize,
-            thumbnailCacheSizeMB = thumbnailCacheSize,
-            appVolume = appVolume,
-            themeMode = themeMode
-        )
+    suspend fun updateSkipSilence(enabled: Boolean) {
+        context.dataStore.edit { it[PreferenceKeys.SKIP_SILENCE] = enabled }
     }
 
-    suspend fun getSettings(): UmihiSettings {
-        return settings.first()
+    suspend fun updateDownloadQuality(quality: DownloadQuality) {
+        context.dataStore.edit { it[PreferenceKeys.DOWNLOAD_QUALITY] = quality.name }
     }
 
-    val cookies = context.dataStore.data.map {
-        Cookies(it[COOKIES] ?: String())
+    suspend fun updateThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { it[PreferenceKeys.THEME_MODE] = mode.name }
     }
 
-    val dataSyncId: Flow<String?> = flow {
-        context.dataStore.data.collect { prefs ->
-            val id = prefs[DATA_SYNC_ID]
-            if (id.isNullOrInvalidId()) {
-                if (id != null) {
-                    context.dataStore.edit { it.remove(DATA_SYNC_ID) }
-                }
-                emit(null)
-            } else {
-                emit(id)
-            }
-        }
+    suspend fun saveDataSyncId(id: String) {
+        context.dataStore.edit { it[PreferenceKeys.DATA_SYNC_ID] = id }
+    }
+
+    suspend fun saveCookies(cookies: String) {
+        context.dataStore.edit { it[PreferenceKeys.COOKIES] = cookies }
     }
 
     suspend fun saveCookies(cookies: Cookies) {
-        context.dataStore.edit {
-            it[COOKIES] = cookies.toRawCookie()
-        }
+        saveCookies(cookies.raw)
     }
 
     suspend fun logOut() {
-        saveCookies(Cookies())
-        saveDataSyncId("")
-    }
-
-    suspend fun saveDataSyncId(newId: String) {
-        if (newId.isNullOrInvalidId()) {
-            context.dataStore.edit { it.remove(DATA_SYNC_ID) }
-            return
-        }
         context.dataStore.edit {
-            it[DATA_SYNC_ID] = newId
+            it[PreferenceKeys.COOKIES] = ""
+            it[PreferenceKeys.DATA_SYNC_ID] = ""
         }
     }
 
-    suspend fun debugPrintAllPreferences() {
-        val prefs = context.dataStore.data.first()
-        LogHelper.printd("=== All preferences ===")
-        prefs.asMap().forEach { (key, value) ->
-            LogHelper.printd("  $key = $value")
-        }
-        LogHelper.printd("========================")
+    suspend fun <T> save(key: Preferences.Key<T>, value: T) {
+        context.dataStore.edit { it[key] = value }
     }
-
-
-    enum class UpdateChannel {
-        Stable,
-        Beta
-    }
-
 }

@@ -43,6 +43,7 @@ class PlaylistDownloadWorker(
 
         val playlist = playlistRepository.getPlaylistById(playlistId)
             ?: return Result.failure()
+        val settings = ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository(appContext).getSettings()
 
         return try {
             val totalSongs = playlist.songs.size
@@ -80,7 +81,16 @@ class PlaylistDownloadWorker(
 
                                 val fullSong = (fullSongData as ApiResult.Success).data
 
-                                val audioPath = DownloadHelper.downloadAudio(appContext, song)
+                                val audioPath = DownloadHelper.downloadAudio(
+                                    context = appContext,
+                                    song = song,
+                                    quality = settings.downloadQuality,
+                                    onProgress = { progress ->
+                                        val completedProgress = ((downloadedSongs.load() * 100) + progress) /
+                                                totalSongs.coerceAtLeast(1)
+                                        setProgressAsync(androidx.work.workDataOf("progress" to completedProgress))
+                                    }
+                                )
 
                                 val thumbnailPath = DownloadHelper.downloadImage(
                                     appContext,

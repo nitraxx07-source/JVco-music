@@ -14,6 +14,7 @@ import ca.ilianokokoro.umihi.music.data.database.AppDatabase
 import ca.ilianokokoro.umihi.music.extensions.getClientName
 import ca.ilianokokoro.umihi.music.models.AddToPlaylistOption
 import ca.ilianokokoro.umihi.music.models.PlaylistInfo
+import ca.ilianokokoro.umihi.music.models.DownloadQuality
 import ca.ilianokokoro.umihi.music.models.PlaylistType
 import ca.ilianokokoro.umihi.music.models.Song
 import ca.ilianokokoro.umihi.music.models.UmihiSettings
@@ -740,6 +741,54 @@ object YoutubeDataExtractor {
         return songRendererList.mapNotNull { extractSong(it) }
     }
 
+    fun extractSearchPlaylists(jsonString: String): List<PlaylistInfo> {
+        val json = Json.parseToJsonElement(jsonString)
+        val playlists = mutableListOf<PlaylistInfo>()
+
+        fun parseSearchPlaylist(renderer: JsonObject): PlaylistInfo? {
+            val endpoint = renderer["navigationEndpoint"]
+                ?.safeObject()
+                ?.get("browseEndpoint")
+                ?.safeObject()
+            val id = endpoint?.get("browseId")?.jsonPrimitive?.contentOrNull ?: return null
+            val title = renderer["title"]
+                ?.safeObject()?.get("runs")?.safeArray()?.firstOrNull()
+                ?.safeObject()?.get("text")?.jsonPrimitive?.contentOrNull
+                ?: renderer["title"]?.jsonPrimitive?.contentOrNull
+                ?: return null
+            val thumbnail = getBestThumbnailUrl(renderer["thumbnail"] ?: renderer["thumbnailRenderer"])
+            return PlaylistInfo(
+                id = id,
+                title = title,
+                coverHref = thumbnail,
+                type = PlaylistType.SAVED,
+            )
+        }
+
+        fun visit(element: JsonElement) {
+            when (element) {
+                is JsonObject -> {
+                    element["musicTwoRowItemRenderer"]?.let { renderer ->
+                        parsePlaylistItem(JsonObject(mapOf("musicTwoRowItemRenderer" to renderer)))
+                            ?.let { playlists.add(it) }
+                    }
+                    listOf("musicPlaylistRenderer", "playlistRenderer").forEach { key ->
+                        element[key]?.safeObject()?.let { renderer ->
+                            parseSearchPlaylist(renderer)?.let { playlists.add(it) }
+                        }
+                    }
+                    element.values.forEach(::visit)
+                }
+
+                is JsonArray -> element.forEach(::visit)
+                else -> Unit
+            }
+        }
+
+        visit(json)
+        return playlists.distinctBy { it.id.removePrefix("VL") }
+    }
+
 
     fun extractSongInfo(jsonString: String): Song {
         val json = Json.parseToJsonElement(jsonString).jsonObject
@@ -1030,7 +1079,8 @@ object YoutubeDataExtractor {
     suspend fun getSongPlayerUrl(
         context: Context,
         song: Song,
-        allowLocal: Boolean = false
+        allowLocal: Boolean = false,
+        quality: DownloadQuality = DownloadQuality.HIGH
     ): String {
         val localSongRepository = AppDatabase.getInstance(context).songRepository()
         var savedSong: Song? = null
@@ -1052,7 +1102,7 @@ object YoutubeDataExtractor {
                 return savedSong.audioFilePath
             }
 
-            if (savedSong.streamUrl != null) {
+            if (quality == DownloadQuality.HIGH && savedSong.streamUrl != null) {
                 if (isYoutubeUrlValid(savedSong.streamUrl)) {
                     printd("[${song.youtubeId}] Got url from saved")
                     return savedSong.streamUrl
@@ -1061,7 +1111,7 @@ object YoutubeDataExtractor {
             }
         }
 
-        val newUri = getSongUrlFromYoutube(song)
+        val newUri = getSongUrlFromYoutube(song, quality)
         localSongRepository.setStreamUrl(songId = song.youtubeId, streamUrl = newUri)
         printd("[${song.youtubeId}] Got url from YouTube and saved song")
         return newUri
@@ -1121,11 +1171,12 @@ object YoutubeDataExtractor {
 
     private suspend fun getSongUrlFromYoutube(
         song: Song,
+        quality: DownloadQuality = DownloadQuality.HIGH,
         retries: Int = Constants.YoutubeApi.RETRY_COUNT
     ): String {
         var lastError: Throwable? = null
 
-        val fastUrl = resolveAnonymousStreamUrl(song.youtubeId)
+        val fastUrl = resolveAnonymousStreamUrl(song.youtubeId, quality)
 
         if (fastUrl != null) {
             return fastUrl
@@ -1135,7 +1186,7 @@ object YoutubeDataExtractor {
         repeat(retries) { attempt ->
             try {
                 return withContext(Dispatchers.IO) {
-                    resolveNewPipeStreamUrl(song)
+                    resolveNewPipeStreamUrl(song, quality)
                 }
             } catch (e: Throwable) {
                 lastError = e
@@ -1159,15 +1210,16 @@ object YoutubeDataExtractor {
 
     private suspend fun resolveAnonymousStreamUrl(
         videoId: String,
+        quality: DownloadQuality = DownloadQuality.HIGH,
     ): String? = withContext(Dispatchers.IO) {
-        suspend fun executeRequest(client: JsonObject): String {
+        suspend fun executeRequest(client: JsonObject, quality: DownloadQuality): String {
             val response = YoutubeApiClient.getPlayerInfo(
                 videoId = videoId,
                 client = client,
                 visitorData = visitorData,
             )
 
-            return extractStreamFromRawResponse(response)
+            return extractStreamFromRawResponse(response, quality)
         }
 
         val softCap = Constants.YoutubeApi.SOFT_TRIES_PER_CLIENT
@@ -1185,7 +1237,7 @@ object YoutubeDataExtractor {
 
                 totalRequests++
                 val errorMessage = try {
-                    val stream = executeRequest(client)
+                    val stream = executeRequest(client, quality)
                     printd(
                         "[$clientName] Resolved stream in $totalRequests total request(s)"
                     )
@@ -1216,22 +1268,27 @@ object YoutubeDataExtractor {
         null
     }
 
-    private fun resolveNewPipeStreamUrl(song: Song): String {
+    private fun resolveNewPipeStreamUrl(song: Song, quality: DownloadQuality): String {
         val service = ServiceList.YouTube
         val extractor = service.getStreamExtractor(song.youtubeUrl)
 
         extractor.fetchPage()
 
-        val bestAudioStream = extractor.audioStreams
+        val audioStreams = extractor.audioStreams
             .filter { it.content.isNotBlank() }
-            .maxByOrNull { it.averageBitrate }
-            ?: error("No valid audio streams found")
+            .sortedBy { it.averageBitrate }
+        val selectedAudioStream = when (quality) {
+            DownloadQuality.LOW -> audioStreams.firstOrNull()
+            DownloadQuality.MEDIUM -> audioStreams.getOrNull(audioStreams.size / 2)
+            DownloadQuality.HIGH -> audioStreams.lastOrNull()
+        } ?: error("No valid audio streams found")
 
-        return bestAudioStream.content
+        return selectedAudioStream.content
     }
 
     private suspend fun extractStreamFromRawResponse(
         text: String,
+        quality: DownloadQuality = DownloadQuality.HIGH,
     ): String {
         val root = Json.parseToJsonElement(text).jsonObject
 
@@ -1272,8 +1329,15 @@ object YoutubeDataExtractor {
                     ?.contentOrNull
                     ?.startsWith("audio/", ignoreCase = true) == true
             }
-            ?.maxByOrNull {
-                it["bitrate"]?.jsonPrimitive?.intOrNull ?: 0
+            ?.toList()
+            ?.sortedBy { it["bitrate"]?.jsonPrimitive?.intOrNull ?: 0 }
+            ?.let { streams ->
+                val index = when (quality) {
+                    DownloadQuality.LOW -> 0
+                    DownloadQuality.MEDIUM -> streams.size / 2
+                    DownloadQuality.HIGH -> streams.lastIndex
+                }
+                streams.getOrNull(index)
             }
             ?.get("url")
             ?.jsonPrimitive

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Equalizer
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LightMode
@@ -48,13 +49,14 @@ import ca.ilianokokoro.umihi.music.core.Constants
 import ca.ilianokokoro.umihi.music.core.DiagnosticLog
 import ca.ilianokokoro.umihi.music.core.helpers.UmihiHelper.usedFraction
 import ca.ilianokokoro.umihi.music.core.managers.VersionManager
-import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository.PreferenceKeys
+import ca.ilianokokoro.umihi.music.data.repositories.PreferenceKeys
 import ca.ilianokokoro.umihi.music.models.ThemeMode
 import ca.ilianokokoro.umihi.music.ui.components.ErrorMessage
 import ca.ilianokokoro.umihi.music.ui.components.FadingStatusBarWrapper
 import ca.ilianokokoro.umihi.music.ui.components.LoadingAnimation
 import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.CacheSizeInputBottomSheet
 import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.DiagnosticsLogBottomSheet
+import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.DownloadQualityBottomSheet
 import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.HiddenPlaylistsBottomSheet
 import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.ThemeSelectorBottomSheet
 import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.UpdateChannelBottomSheet
@@ -250,6 +252,32 @@ fun SettingsScreen(
                                 value = screenState.settings.useAudioOffload,
                                 onToggle = settingsViewModel::updateAudioOffloadSetting
                             )
+                            SettingSpacer()
+                            BooleanSettingItem(
+                                title = "Saltar silencios",
+                                subtitle = "Recorta automáticamente los espacios silencios en la reproducción",
+                                leadingIcon = Icons.Outlined.History,
+                                value = screenState.settings.skipSilence,
+                                onToggle = settingsViewModel::toggleSkipSilence
+                            )
+                            SettingSpacer()
+                            SettingsItem(
+                                title = "Descargas en alta calidad",
+                                subtitle = when (screenState.settings.downloadQuality) {
+                                    ca.ilianokokoro.umihi.music.models.DownloadQuality.LOW -> "Calidad baja"
+                                    ca.ilianokokoro.umihi.music.models.DownloadQuality.MEDIUM -> "Calidad media"
+                                    ca.ilianokokoro.umihi.music.models.DownloadQuality.HIGH -> "Calidad alta"
+                                },
+                                leadingIcon = Icons.Outlined.CloudDownload,
+                                onClick = { settingsViewModel.updateShowDownloadQualitySheet(true) }
+                            )
+                            SettingSpacer()
+                            SettingsItem(
+                                title = "Ecualizador del sistema",
+                                subtitle = "Abrir el ecualizador instalado en Android",
+                                leadingIcon = Icons.Outlined.Equalizer,
+                                onClick = settingsViewModel::openSystemEqualizer
+                            )
                         }
 
                         SettingsSection(
@@ -388,7 +416,13 @@ fun SettingsScreen(
                             }
                         }
 
-                        if (uiState.showThemeSelectorSheet) {
+                        if (uiState.showDownloadQualitySheet) {
+                            DownloadQualityBottomSheet(
+                                selected = screenState.settings.downloadQuality,
+                                onSelect = settingsViewModel::updateDownloadQuality,
+                                onClose = { settingsViewModel.updateShowDownloadQualitySheet(false) }
+                            )
+                        } else if (uiState.showThemeSelectorSheet) {
                             ThemeSelectorBottomSheet(
                                 selectedOption = screenState.settings.themeMode,
                                 onChange = {

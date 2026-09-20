@@ -104,7 +104,6 @@ class PlaybackService : MediaLibraryService() {
             .setHandleAudioBecomingNoisy(true)
             .setDeviceVolumeControlEnabled(true)
             .setMediaSourceFactory(DefaultMediaSourceFactory(resolvingFactory))
-            .setSkipSilenceEnabled(true)
             .build()
 
         player.preloadConfiguration =
@@ -149,6 +148,7 @@ class PlaybackService : MediaLibraryService() {
                 TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
             }
             withContext(Dispatchers.Main) {
+                setSkipSilenceEnabled(settings.skipSilence)
                 player.trackSelectionParameters =
                     player.trackSelectionParameters
                         .buildUpon()
@@ -294,6 +294,28 @@ class PlaybackService : MediaLibraryService() {
                     exception = e
                 )
             }
+        }
+    }
+
+    fun setSkipSilenceEnabled(enabled: Boolean) {
+        if (!::player.isInitialized) return
+        player.setSkipSilenceEnabled(enabled)
+    }
+
+    fun openSystemEqualizer(): Boolean {
+        if (!::player.isInitialized || currentAudioSessionId <= 0) return false
+        val intent = Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
+            putExtra(AudioEffect.EXTRA_AUDIO_SESSION, currentAudioSessionId)
+            putExtra(AudioEffect.EXTRA_PACKAGE_NAME, packageName)
+            putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            startActivity(intent)
+            true
+        } catch (e: Exception) {
+            printe(message = "No system equalizer available: ${e.message}", exception = e)
+            false
         }
     }
 

@@ -11,6 +11,7 @@ import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.compose.ui.graphics.Color
 import ca.ilianokokoro.umihi.music.R
 import ca.ilianokokoro.umihi.music.audio.PlaybackService
 import ca.ilianokokoro.umihi.music.core.Constants
@@ -71,6 +72,13 @@ object PlayerManager {
 
     private val _appVolume = MutableStateFlow(Constants.Player.Volume.DEFAULT_PERCENT)
     val appVolume: StateFlow<Int> = _appVolume.asStateFlow()
+
+    private val _dynamicBackgroundColor = MutableStateFlow(Color(0xFF1B1C24))
+    val dynamicBackgroundColor: StateFlow<Color> = _dynamicBackgroundColor.asStateFlow()
+
+    fun updateDynamicBackgroundColor(color: Color) {
+        _dynamicBackgroundColor.value = color
+    }
 
     fun registerPlaybackService(service: PlaybackService) {
         playbackService = service
@@ -467,6 +475,14 @@ object PlayerManager {
     fun setPlaybackSpeed(speed: Float) {
         currentController?.setPlaybackSpeed(speed)
         _playbackSpeed.value = speed
+    }
+
+    fun setSkipSilenceEnabled(enabled: Boolean) {
+        playbackService?.setSkipSilenceEnabled(enabled)
+    }
+
+    fun openSystemEqualizer(): Boolean {
+        return playbackService?.openSystemEqualizer() == true
     }
 
     fun cancelSleepTimer() {
