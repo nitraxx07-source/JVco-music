@@ -224,10 +224,7 @@ class PlayerViewModel(application: Application) :
             state.copy(
                 currentIndex = index,
                 queue = mergedQueue,
-                isLiked = mergedQueue.getOrNull(index)?.isLiked ?: false,
-                dynamicBackgroundSource = mergedQueue.getOrNull(index)?.thumbnailPath
-                    ?: mergedQueue.getOrNull(index)?.thumbnailHref
-                    ?: state.dynamicBackgroundSource
+                isLiked = mergedQueue.getOrNull(index)?.isLiked ?: false
             )
         }
 

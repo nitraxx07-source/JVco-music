@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
@@ -66,6 +67,11 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
     val currentScreen = backStack.last()
     val screenConfig = rememberScreenUiConfig(currentScreen)
     val dynamicPlayerColor by PlayerManager.dynamicBackgroundColor.collectAsStateWithLifecycle()
+    val animatedPlayerColor by animateColorAsState(
+        targetValue = dynamicPlayerColor,
+        animationSpec = tween(650),
+        label = "player-background"
+    )
 
     var showFullPlayer by remember { mutableStateOf(false) }
     var bottomBarHeightPixels by remember { mutableIntStateOf(0) }
@@ -241,7 +247,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
     if (showFullPlayer) {
         ModalBottomSheet(
             sheetMaxWidth = Dp.Unspecified,
-            containerColor = dynamicPlayerColor,
+            containerColor = animatedPlayerColor,
             onDismissRequest = {
                 showFullPlayer = false
             },

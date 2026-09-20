@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -30,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -68,6 +70,11 @@ fun PlayerScreen(
     val uiState = playerViewModel.uiState.collectAsStateWithLifecycle().value
     val orientation = LocalConfiguration.current.orientation
     val currentSong = uiState.queue.getOrNull(uiState.currentIndex)
+    val animatedBackgroundColor by animateColorAsState(
+        targetValue = uiState.dynamicBackgroundColor,
+        animationSpec = tween(650),
+        label = "song-background"
+    )
 
     // Close the screen if resumed with an empty queue
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -87,7 +94,7 @@ fun PlayerScreen(
             end = 8.dp,
             bottom = 10.dp
         ),
-        containerColor = uiState.dynamicBackgroundColor.copy(alpha = 0.82f)
+        containerColor = animatedBackgroundColor.copy(alpha = 0.82f)
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -95,7 +102,7 @@ fun PlayerScreen(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            uiState.dynamicBackgroundColor.copy(alpha = 0.88f),
+                            animatedBackgroundColor.copy(alpha = 0.88f),
                             MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.96f),
                         )
                     )

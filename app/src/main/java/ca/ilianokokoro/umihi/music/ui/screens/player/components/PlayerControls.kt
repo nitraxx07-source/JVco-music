@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
@@ -72,6 +74,9 @@ fun PlayerControls(
     playbackSpeed: Float,
     sleepTimerRemainingSeconds: Long?,
 ) {
+    val blue = Color(0xFF1687F7)
+    val blueDark = Color(0xFF0755B5)
+    val blueSoft = Color(0xFFB9DEFF)
     val mainButtonsControlsInteractionSources =
         List(3) { ComposeHelper.rememberInteractionSource() }
     val actionButtonsControlsInteractionSources =
@@ -122,7 +127,13 @@ fun PlayerControls(
                                 .padding(vertical = 20.dp)
                                 .weight(2f)
                                 .size(IconButtonDefaults.mediumContainerSize(IconButtonDefaults.IconButtonWidthOption.Wide))
+                                .shadow(8.dp, IconButtonDefaults.shapes().shape)
                                 .animateWidth(interactionSource = mainButtonsControlsInteractionSources[0])
+                            ,
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = blue,
+                                contentColor = Color.White
+                            )
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.SkipPrevious,
@@ -149,15 +160,16 @@ fun PlayerControls(
                             },
                             shapes = IconButtonDefaults.toggleableShapes(),
                             colors = IconButtonDefaults.filledIconToggleButtonColors(
-                                checkedContainerColor = IconButtonDefaults.filledIconToggleButtonColors().checkedContainerColor,
-                                checkedContentColor = IconButtonDefaults.filledIconToggleButtonColors().checkedContentColor,
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                contentColor = MaterialTheme.colorScheme.onSurface
+                                checkedContainerColor = blue,
+                                checkedContentColor = Color.White,
+                                containerColor = blueDark,
+                                contentColor = blueSoft
                             ),
                             interactionSource = mainButtonsControlsInteractionSources[1],
                             modifier = Modifier
                                 .weight(3f)
                                 .size(IconButtonDefaults.largeContainerSize(IconButtonDefaults.IconButtonWidthOption.Wide))
+                                .shadow(12.dp, IconButtonDefaults.toggleableShapes().shape)
                                 .animateWidth(interactionSource = mainButtonsControlsInteractionSources[1])
                         ) {
                             if (isLoading) {
@@ -203,7 +215,13 @@ fun PlayerControls(
                                 .padding(vertical = 20.dp)
                                 .weight(2f)
                                 .size(IconButtonDefaults.mediumContainerSize(IconButtonDefaults.IconButtonWidthOption.Wide))
+                                .shadow(8.dp, IconButtonDefaults.shapes().shape)
                                 .animateWidth(interactionSource = mainButtonsControlsInteractionSources[2])
+                            ,
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = blue,
+                                contentColor = Color.White
+                            )
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.SkipNext,
