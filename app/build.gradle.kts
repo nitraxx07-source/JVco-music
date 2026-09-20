@@ -36,7 +36,7 @@ android {
     buildToolsVersion = "37.0.0"
 
     defaultConfig {
-        applicationId = "ca.ilianokokoro.umihi.music"
+        applicationId = "com.jvco.music.auto"
         minSdk = 24
         targetSdk = 37
         versionCode = appVersionCode
